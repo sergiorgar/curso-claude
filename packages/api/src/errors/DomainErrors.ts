@@ -210,3 +210,63 @@ export class RestaurantIdQueryRequiredError extends AppError {
     super('El parámetro restaurantId es obligatorio')
   }
 }
+
+export class TableNotFoundError extends AppError {
+  constructor() {
+    super('Mesa no encontrada')
+  }
+}
+
+export class DuplicatedTableNumberError extends AppError {
+  constructor() {
+    super('Ya existe una mesa con ese número en el restaurante')
+  }
+}
+
+export class TableOccupiedError extends AppError {
+  constructor() {
+    super('No se puede eliminar una mesa ocupada')
+  }
+}
+
+export class TableAlreadyOccupiedError extends AppError {
+  constructor() {
+    super('La mesa ya está ocupada')
+  }
+}
+
+export class InsufficientTableCapacityError extends AppError {
+  constructor() {
+    super('La mesa no tiene capacidad suficiente para el número de personas')
+  }
+}
+
+export class InvalidGuestsError extends AppError {
+  constructor() {
+    super('El número de personas debe ser un entero mayor que 0')
+  }
+}
+
+export class InvalidTableStatusError extends AppError {
+  constructor(message?: string) {
+    super(message ?? 'El estado de la mesa debe ser libre, ocupada o reservada')
+  }
+}
+
+export class InvalidTableNumberError extends AppError {
+  constructor() {
+    super('El número de mesa debe ser un entero mayor que 0')
+  }
+}
+
+export class InvalidTableCapacityError extends AppError {
+  constructor() {
+    super('La capacidad de la mesa debe ser un entero mayor que 0')
+  }
+}
+
+export class TableNotOccupiedError extends AppError {
+  constructor() {
+    super('La mesa no está ocupada')
+  }
+}
