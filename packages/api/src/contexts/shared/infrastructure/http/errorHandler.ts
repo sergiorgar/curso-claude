@@ -7,7 +7,14 @@ const NOT_FOUND_ERRORS = [
     'IngredientNotFoundError',
     'DishNotFoundError',
     'OrderNotFoundError',
-    'OrderItemNotFoundError'
+    'OrderItemNotFoundError',
+    'TableNotFoundError'
+]
+
+const CONFLICT_ERRORS = [
+    'DuplicatedTableNumberError',
+    'TableOccupiedError',
+    'TableAlreadyOccupiedError'
 ]
 
 const UNAUTHORIZED_ERRORS = [
@@ -31,6 +38,8 @@ export const errorHandler = (err: any, _req: Request, res: Response, _next: Next
             statusCode = 401
         } else if (FORBIDDEN_ERRORS.includes(err.name)) {
             statusCode = 403
+        } else if (CONFLICT_ERRORS.includes(err.name)) {
+            statusCode = 409
         }
 
         res.status(statusCode).json({
