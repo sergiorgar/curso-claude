@@ -3,7 +3,7 @@ import express from 'express'
 import request from 'supertest'
 import { authenticate, authorize } from './middlewares.js'
 import { errorHandler } from './errorHandler.js'
-import { OrderNotFoundError, OrderItemNotFoundError, InvalidOrderStatusError } from '@errors/DomainErrors.js'
+import { OrderNotFoundError, OrderItemNotFoundError, InvalidOrderStatusError, TableNotFoundError, DuplicatedTableNumberError, TableOccupiedError, TableAlreadyOccupiedError } from '@errors/DomainErrors.js'
 
 const buildApp = () => {
     const app = express()
@@ -11,6 +11,10 @@ const buildApp = () => {
     app.get('/order-not-found', (_req, _res, next) => next(new OrderNotFoundError()))
     app.get('/item-not-found', (_req, _res, next) => next(new OrderItemNotFoundError()))
     app.get('/invalid-status', (_req, _res, next) => next(new InvalidOrderStatusError()))
+    app.get('/table-not-found', (_req, _res, next) => next(new TableNotFoundError()))
+    app.get('/duplicated-table', (_req, _res, next) => next(new DuplicatedTableNumberError()))
+    app.get('/table-occupied', (_req, _res, next) => next(new TableOccupiedError()))
+    app.get('/table-already-occupied', (_req, _res, next) => next(new TableAlreadyOccupiedError()))
     app.use(errorHandler)
     return app
 }
@@ -36,5 +40,18 @@ describe('errorHandler', () => {
 
     it('should return 400 for an invalid order status', async () => {
         expect((await request(buildApp()).get('/invalid-status')).status).toBe(400)
+    })
+
+    it('should return 404 for table not found', async () => {
+        const res = await request(buildApp()).get('/table-not-found')
+        expect(res.status).toBe(404)
+        expect(res.body).toEqual({ error: 'TableNotFoundError', message: 'Mesa no encontrada' })
+    })
+
+    it('should return 409 for table conflicts', async () => {
+        const app = buildApp()
+        expect((await request(app).get('/duplicated-table')).status).toBe(409)
+        expect((await request(app).get('/table-occupied')).status).toBe(409)
+        expect((await request(app).get('/table-already-occupied')).status).toBe(409)
     })
 })
