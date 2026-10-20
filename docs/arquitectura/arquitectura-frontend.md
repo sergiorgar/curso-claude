@@ -122,6 +122,20 @@ Para todo lo demás (restaurantes, carta/platos, confirmación y consulta de ped
 
 ---
 
+## Gestión de mesas en los frontends
+
+La feature de mesas (contrato en `docs/api/openapi.yaml`, tag `Tables`) toca las tres apps:
+
+| App | Feature | Qué hace |
+| --- | --- | --- |
+| `web-admin` | `features/tables/` | CRUD de mesas del restaurante (lista con filtro por estado, formulario de alta y edición, cambio de estado y borrado). Muestra en español los errores `DuplicatedTableNumberError` y `TableOccupiedError` |
+| `web-empleados` | `features/tables/` | Cuadrícula de mesas por estado con cambio de estado (oculto para `cocinero`) y panel con los pedidos de las mesas ocupadas (`GET /restaurants/:restaurantId/tables/orders`). Polling cada 30 s |
+| `web-clientes` | `features/tables/` | Tras elegir restaurante, el cliente indica el número de personas, ve las mesas libres con capacidad suficiente y, al continuar, ocupa la mesa (`POST /public/restaurants/:restaurantId/tables/:id/occupy`) antes de ir a la carta. El pedido se envía con el `tableId` de la mesa ocupada |
+
+Las mesas usan campos en inglés (`number`, `description`, `capacity`, `status`) y los valores de `status` en español: `libre`, `ocupada`, `reservada`. Ante un 409 `TableAlreadyOccupiedError` el cliente refresca la lista de mesas disponibles.
+
+---
+
 ## Librería Compartida: `@resttek/web-shared`
 
 Centraliza todo lo que comparten los 3 frontends:
