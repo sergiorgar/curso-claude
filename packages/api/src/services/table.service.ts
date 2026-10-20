@@ -7,7 +7,10 @@ import {
     RestaurantNotFoundError,
     TableNotFoundError,
     DuplicatedTableNumberError,
-    TableOccupiedError
+    TableOccupiedError,
+    TableAlreadyOccupiedError,
+    InsufficientTableCapacityError,
+    InvalidGuestsError
 } from '@errors/DomainErrors.js'
 
 export interface CreateTableInput {
@@ -101,6 +104,44 @@ export class TableService {
         await this.ensureRestaurantExists(restaurantId)
         const normalizedStatus = status === undefined ? undefined : normalizeTableStatus(status)
         return this.tableRepository.findByRestaurant(restaurantId, normalizedStatus)
+    }
+
+    async changeStatus(restaurantId: string, id: string, status: string): Promise<Table> {
+        const existing = await this.getById(restaurantId, id)
+        const updated: Table = {
+            ...existing,
+            status: normalizeTableStatus(status),
+            updatedAt: new Date().toISOString()
+        }
+        await this.tableRepository.update(updated)
+        return updated
+    }
+
+    async listAvailable(restaurantId: string, people: unknown): Promise<Table[]> {
+        const guests = this.normalizeGuests(people)
+        await this.ensureRestaurantExists(restaurantId)
+        return this.tableRepository.findAvailable(restaurantId, guests)
+    }
+
+    async occupy(restaurantId: string, id: string, people: unknown): Promise<Table> {
+        const guests = this.normalizeGuests(people)
+        const table = await this.getById(restaurantId, id)
+
+        if (table.capacity < guests) {
+            throw new InsufficientTableCapacityError()
+        }
+        if (!await this.tableRepository.occupyIfFree(id)) {
+            throw new TableAlreadyOccupiedError()
+        }
+
+        return this.getById(restaurantId, id)
+    }
+
+    private normalizeGuests(people: unknown): number {
+        if (typeof people !== 'number' || !Number.isInteger(people) || people < 1) {
+            throw new InvalidGuestsError()
+        }
+        return people
     }
 
     private async ensureRestaurantExists(restaurantId: string): Promise<void> {
