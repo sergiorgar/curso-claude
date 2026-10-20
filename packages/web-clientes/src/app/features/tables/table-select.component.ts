@@ -1,8 +1,9 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core'
-import { ActivatedRoute, RouterLink } from '@angular/router'
+import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { FormsModule } from '@angular/forms'
 import { RestaurantService } from '../../core/services/restaurant.service'
 import { TableService } from '../../core/services/table.service'
+import { TableSessionStore } from '../../core/store/table-session.store'
 import { Restaurant } from '../../core/models/restaurant.model'
 import { Table } from '../../core/models/table.model'
 
@@ -53,7 +54,7 @@ import { Table } from '../../core/models/table.model'
       }
 
       <div class="actions">
-        <button class="btn btn-primary" [disabled]="!selectedId() || submitting()">Continuar</button>
+        <button class="btn btn-primary" [disabled]="!selectedId() || submitting()" (click)="continue()">Continuar</button>
       </div>
     </div>
   `,
@@ -117,6 +118,8 @@ export class TableSelectComponent implements OnInit {
   private readonly route = inject(ActivatedRoute)
   private readonly restaurantService = inject(RestaurantService)
   private readonly tableService = inject(TableService)
+  private readonly tableSession = inject(TableSessionStore)
+  private readonly router = inject(Router)
 
   private restaurantId = ''
 
@@ -152,6 +155,31 @@ export class TableSelectComponent implements OnInit {
 
   select(table: Table): void {
     this.selectedId.set(table.id)
+  }
+
+  continue(): void {
+    const table = this.tables().find(t => t.id === this.selectedId())
+    if (!table || !this.validPeople()) return
+
+    this.submitting.set(true)
+    this.error.set(null)
+    this.notice.set(null)
+    this.tableService.occupy(this.restaurantId, table.id, this.people()!).subscribe({
+      next: (occupied) => {
+        this.tableSession.set(this.restaurantId, this.people()!, occupied)
+        this.router.navigate(['/restaurants', this.restaurantId])
+      },
+      error: (err) => {
+        this.submitting.set(false)
+        if (err.status === 409) {
+          this.selectedId.set(null)
+          this.notice.set('Esa mesa acaba de ser ocupada. Elige otra de la lista actualizada.')
+          this.loadTables()
+        } else {
+          this.error.set(err.error?.message || 'No se ha podido ocupar la mesa. Inténtalo de nuevo.')
+        }
+      }
+    })
   }
 
   private loadTables(): void {
