@@ -220,7 +220,9 @@ export class CartComponent {
         const code = err.error?.error
         if (code === 'TableNotOccupiedError' || code === 'TableNotFoundError') {
           this.tableSession.clear()
-          this.router.navigate(['/restaurants', restaurantId, 'tables'])
+          this.router.navigate(['/restaurants', restaurantId, 'tables'], {
+            state: { notice: err.error?.message || 'La mesa ya no está disponible. Elige otra.' }
+          })
           return
         }
         this.error.set('Error al confirmar el pedido. Inténtalo de nuevo.')

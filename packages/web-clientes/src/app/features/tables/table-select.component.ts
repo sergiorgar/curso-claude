@@ -139,6 +139,8 @@ export class TableSelectComponent implements OnInit {
 
   ngOnInit(): void {
     this.restaurantId = this.route.snapshot.paramMap.get('id')!
+    const navigationNotice = history.state?.notice
+    if (typeof navigationNotice === 'string') this.notice.set(navigationNotice)
     this.restaurantService.getById(this.restaurantId).subscribe({
       next: (restaurant) => this.restaurant.set(restaurant),
       error: () => {}
