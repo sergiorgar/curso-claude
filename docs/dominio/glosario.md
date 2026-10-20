@@ -15,6 +15,7 @@ Terminología del dominio y conceptos técnicos utilizados en el proyecto Restte
 | **Dish** | Plato de la carta de un restaurante. Tiene nombre, descripción, precio, categoría y puede estar disponible o no. |
 | **Ingredient** | Ingrediente utilizado en los platos. Tiene nombre, unidad de medida y stock actual. Pertenece a un restaurante. |
 | **DishIngredient** | Relación entre un plato y un ingrediente, con la cantidad necesaria. |
+| **Table** (mesa) | Mesa de un restaurante, con número (único por restaurante), descripción, capacidad y estado. Los pedidos pueden asociarse a una mesa ocupada. |
 | **Order** | Pedido realizado por un cliente. Contiene ítems (platos) y está asociado a un restaurante. |
 | **OrderItem** | Línea de un pedido: un plato con cantidad, notas opcionales y estado. |
 
@@ -34,6 +35,16 @@ Dos particularidades del modelo que conviene tener presentes:
 | **cliente** | Cliente final. Hace pedidos. | web-clientes |
 
 El valor almacenado es `manager`; "gerente" es solo su traducción en la interfaz. La columna **Acceso** describe lo que muestra el menú de cada app, no una restricción real: en `web-empleados` el filtrado por rol es de navegación y las tres vistas son accesibles por URL para cualquier usuario con sesión. Quien decide de verdad es el middleware `authorize()` de la API.
+
+### Estados de Mesa
+
+| Estado | Significado |
+| --- | --- |
+| `libre` | Disponible: aparece en la lista de mesas disponibles del cliente |
+| `ocupada` | En uso: un cliente la ha ocupado (o el personal la ha marcado así); admite pedidos y no se puede borrar |
+| `reservada` | Apartada a mano por el personal; no se ofrece al cliente. No hay reservas con fecha/hora |
+
+Cualquier estado puede cambiar a cualquier otro por parte del personal (`admin`, `manager`, `camarero`). El cliente solo puede pasar una mesa de `libre` a `ocupada`, y no puede liberarla.
 
 ### Estados de Pedido
 
