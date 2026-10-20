@@ -2,59 +2,73 @@
 
 Este archivo ofrece orientación a Claude Code (claude.ai/code) cuando trabaja con el código de este repositorio.
 
-## Comandos
+## Qué es
 
-- `npm install` — instala las dependencias
-- `npm start` — arranca la API (`node --env-file=.env src/index.js`); requiere un `.env`
-- `npm run dev` — arranca con recarga automática (`--watch`)
+Resttek: plataforma de gestión de restaurantes. Monorepo con **npm workspaces** (`packages/*`): una API Node.js y tres apps Angular más una librería compartida.
 
-Todavía no hay configuración de build, lint ni tests.
+| Paquete | Qué es |
+| --- | --- |
+| `packages/api` | API REST (Express 5 + TypeScript, ESM, SQLite con `sqlite3`) |
+| `packages/web-admin` | Panel de administración (Angular) |
+| `packages/web-empleados` | App de empleados: cocina, barra y salón (Angular) |
+| `packages/web-clientes` | App de pedidos para clientes (Angular) |
+| `packages/web-shared` | Librería Angular compartida (`@resttek/web-shared`) |
+
+## Comandos (desde la raíz)
+
+- `npm install` — instala todos los paquetes
+- `npm run seed` — puebla la base de datos SQLite con datos de ejemplo
+- `npm run dev:api` — API en `http://localhost:3000` (`tsx watch`)
+- `npm run dev:admin` / `dev:empleados` / `dev:clientes` — apps Angular con proxy a la API
+- `npm test` — tests de la API (Vitest)
+- `npm run docs:api` — valida `docs/api/openapi.yaml` y regenera `docs/api/index.html`
+
+No hay lint configurado. Los tests de los frontends no se ejecutan desde la raíz.
 
 ## Documentación del proyecto
 
-- `docs`:
--- `api`:
---- `api-paginacion.md`: Lee este documento cada vez que necesites implementar la paginación en un endpoint.
+- `docs/arquitectura/`: `arquitectura-general.md`, `arquitectura-api.md`, `arquitectura-frontend.md`. Léelos antes de tocar la capa correspondiente.
+- `docs/dominio/`: `glosario.md`, `modelo-datos.md`.
+- `docs/api/`: `openapi.yaml` (fuente de verdad de la API) e `index.html` (generado, no se edita a mano).
+- `docs/plans/`: planes generados por la skill `plan-feature`.
+- `docs/revisiones/`: revisiones de consistencia de la documentación.
 
-## Arquitectura
+## Arquitectura de la API
 
-API con Express (CommonJS, sin paso de build). `src/index.js` crea la app, habilita `express.json()`, monta los routers y escucha en `PORT` (por defecto 3000).
+La API mezcla dos estilos (detalle en `docs/arquitectura/arquitectura-api.md`):
 
-El código se organiza por capas. Cada capa solo depende de la inmediatamente inferior:
+- **Hexagonal + DDD** solo en el contexto `employee` (`src/contexts/employee/`: `domain`, `application` con casos de uso, `infrastructure`).
+- **Por capas** en `restaurant`, `dish`, `ingredient` y `order`:
 
 ```
-routers → controllers → services → repositories → models
+routes → controllers → services → repositories → models
 ```
 
-- **routers**: definen las rutas HTTP y las asocian a un controller. Sin lógica.
-- **controllers**: leen la petición (`req`), validan la entrada, llaman al service y construyen la respuesta HTTP (códigos de estado y cuerpo).
-- **services**: lógica de negocio (p. ej. hash de contraseñas, emisión del JWT). No conocen `req` ni `res`.
-- **repositories**: único punto de acceso a los datos. Ocultan dónde se almacenan (hoy en memoria, mañana una base de datos).
-- **models**: definición de las entidades (p. ej. `User`).
+Cada una vive en su carpeta de `src/` (`routes`, `controllers`, `services`, `repositories`, `models`). Las rutas componen sus dependencias (repositorio → servicio → controlador) en el propio fichero. `src/contexts/shared/` contiene el value object `Email`, los middlewares (`authenticate`, `authorize`) y el `errorHandler`.
 
-Cada capa vive en su propio directorio dentro de `src/` (`src/routers`, `src/controllers`, `src/services`, `src/repositories`, `src/models`).
+Imports con alias de ruta (`@routes/*`, `@controllers/*`, `@services/*`, `@repositories/*`, `@models/*`, `@errors/*`, `@config/*`, `@employee/*`, `@shared/*`, `@scripts/*`), definidos en `packages/api/tsconfig.json`.
 
-Endpoints actuales:
+La API se monta bajo `/api/v1` (más `GET /health` en la raíz). Los endpoints públicos están en `/api/v1/public/...`. Roles: `admin`, `manager`, `camarero`, `cocinero`, `cliente`; la autenticación es JWT con `Authorization: Bearer <token>`.
 
-- `GET /health` devuelve `{ ok: true }`.
-- `POST /auth/register` y `POST /auth/login` (login con email y contraseña, devuelve un JWT).
+## Errores
 
-Piezas transversales: `src/config.js` (lee las variables de entorno y exige `JWT_SECRET`), `src/errors.js` (`AppError` con código HTTP) y `src/middlewares/errorHandler.js`. Los services lanzan `AppError` y el error handler lo convierte en la respuesta; los controllers no hacen `try/catch`.
+- Los errores de dominio extienden `AppError` y están en `src/errors/DomainErrors.ts`. Los services y modelos los lanzan; los controllers los pasan con `next(error)` (nada de `try/catch` que construya la respuesta a mano) y los middlewares igual con `next(new XxxError())`.
+- El `errorHandler` traduce el nombre del error a código HTTP (404 not found, 401 credenciales/token, 403 permisos, 400 el resto, 500 inesperados). Si creas un error nuevo que no sea 400, añádelo a la lista correspondiente.
+- **Formato único de error:** `{ "error": "<NombreDelError>", "message": "<texto en español>" }`.
+- Los mensajes que ve el usuario están **en español**.
 
 ## Convenciones
 
-- **Sin librerías externas si hay solución nativa en Node.** Antes de añadir una dependencia, comprueba si Node lo resuelve con sus módulos integrados (`crypto`, `node:test`, `--env-file`, `--watch`, `fetch`, etc.). Solo se añade una dependencia cuando no existe alternativa nativa razonable (p. ej. Express para el servidor HTTP o `jsonwebtoken` para JWT).
-- **Variables de entorno desde un archivo `.env`** (o similar), no definidas a mano en el código. Se cargan con la opción nativa de Node `--env-file=.env`, sin `dotenv`. `.env` está en `.gitignore`; si se necesita documentar las variables, usar un `.env.example` sin valores reales.
-- Variables actuales: `PORT` (por defecto 3000), `JWT_SECRET` (obligatoria, la app no arranca sin ella), `JWT_EXPIRES_IN` (por defecto `1h`). Para un entorno nuevo: `cp .env.example .env` y rellenar `JWT_SECRET`.
-- **Clases en las capas, no funciones sueltas.** Los archivos de routers, controllers, services, repositories y models exportan una clase, y la lógica va en métodos de esa clase (no en funciones sueltas a nivel de módulo). Un archivo = una clase.
-- **Los métodos van en `snake_case`** (p. ej. `find_by_email`, `register_user`). Se aplica a los métodos de las clases de todas las capas.
-- **Base de datos: SQLite.** Los datos se persisten en SQLite, accedido solo desde la capa de repositories (ningún otro sitio ejecuta SQL). Siguiendo la regla de «sin librerías externas», usar el módulo nativo `node:sqlite` en lugar de un paquete npm, salvo que no sea viable en la versión de Node del proyecto. La ruta del archivo de la base de datos se configura por variable de entorno en `.env`.
+- **Clases en las capas por capas** (un archivo = una clase) para controllers, services y repositories; los métodos siguen el `camelCase` existente.
+- **SQL solo en repositories.** Ningún otro sitio accede a la base de datos.
+- **Sin dependencias nuevas si hay solución nativa** en Node o en lo que el proyecto ya usa.
+- **Tests con Vitest**, junto al código que prueban (`*.test.ts`), con dobles en `mocks/`. Para probar HTTP se usa `supertest` (ver `errorHandler.test.ts`).
+- **Código y commits en inglés**; mensajes de error de la API y documentación en español. Commits en formato Conventional Commits.
 
-> Estado: el código existente aún no cumple estas tres últimas convenciones. Los archivos de las capas exportan funciones en `camelCase` y `src/repositories/userRepository.js` sigue usando un `Map` en memoria (los usuarios se pierden al reiniciar). Hay que migrarlos; el código nuevo debe cumplirlas desde el principio.
-- Los mensajes de error que ve el usuario están en español; mantener esa coherencia.
+## Documentación de la API (OpenAPI)
 
-## Índice de guías
+Cualquier cambio que toque la API (rutas, parámetros, cuerpos, respuestas, códigos de estado, roles o errores) debe actualizar `docs/api/openapi.yaml` y regenerar el HTML con `npm run docs:api` (que falla si la spec no es válida). La skill `plan-feature` ya incluye estas tareas en los planes que tocan la API.
 
-Consulta la guía correspondiente antes de implementar lo que describe:
+## Pendiente de documentar
 
-- **Paginación** (cualquier endpoint que liste colecciones): sigue [guia-estilos.md](guia-estilos.md) (patrón `ResponsePage` con `self`, `first`, `prev`, `next`, `last` e `items`). Implementación de referencia: `GET /vendehumos` en `src/controllers/vendehumoController.js`.
+No existe todavía una guía de paginación: `GET /employees` pagina con `limit`/`offset`, pero ningún endpoint devuelve un envoltorio de página. Si se implementa paginación en otro endpoint, crea esa guía en `docs/api/` y enlázala aquí.
