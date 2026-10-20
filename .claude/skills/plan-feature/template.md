@@ -16,11 +16,11 @@
 
 ## Tareas
 
-> Cada tarea dura entre 5 y 10 minutos. Orden: models → repositories → services → controllers → routers → verificación.
+> Cada tarea dura entre 5 y 10 minutos. Orden: models → repositories → services → controllers → routes → verificación.
 
-- [ ] **1. <acción concreta>** — `<ruta/del/archivo.js>` (~5 min)
-- [ ] **2. <acción concreta>** — `<ruta/del/archivo.js>` (~10 min)
-- [ ] **3. <acción concreta>** — `<ruta/del/archivo.js>` (~5 min)
+- [ ] **1. <acción concreta>** — `<ruta/del/archivo.ts>` (~5 min)
+- [ ] **2. <acción concreta>** — `<ruta/del/archivo.ts>` (~10 min)
+- [ ] **3. <acción concreta>** — `<ruta/del/archivo.ts>` (~5 min)
 - [ ] **N-1. Actualizar la spec OpenAPI** — `docs/api/openapi.yaml` (~5-10 min) _(solo si el cambio toca la API)_
 - [ ] **N. Regenerar el HTML con `npm run docs:api`** — `docs/api/index.html` (~5 min) _(solo si el cambio toca la API)_
 
@@ -30,7 +30,7 @@
 - [ ] <condición observable y comprobable 2>
 - [ ] <caso de error: código HTTP y mensaje en español>
 - [ ] `docs/api/openapi.yaml` refleja el cambio y `npm run docs:api` termina sin errores _(solo si toca la API)_
-- [ ] Se respetan las convenciones del proyecto (capas, clases, métodos en `snake_case`).
+- [ ] Se respetan las convenciones del proyecto (capas, clases, métodos en `camelCase`).
 
 ## Riesgos y dudas abiertas
 

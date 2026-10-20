@@ -14,7 +14,7 @@ Implementa el plan indicado: $ARGUMENTS
 
 - Si `$ARGUMENTS` está vacío, lista `docs/plans/` y pregunta con `AskUserQuestion` cuál implementar (o usa el único que haya).
 - Lee el plan completo: objetivo, alcance, tareas (`- [ ]`) y criterios de aceptación.
-- Lee `CLAUDE.md` del proyecto (capas, clases, métodos en `snake_case`, SQLite con `node:sqlite` solo en repositories, sin dependencias innecesarias, errores en español) y las guías que el plan o el índice de guías mencionen.
+- Lee `CLAUDE.md` del proyecto (capas, clases, métodos en `camelCase`, SQL solo en repositories, errores de dominio con `next(error)`, sin dependencias innecesarias, errores en español) y las guías que el plan o `CLAUDE.md` mencionen.
 - Si el plan no tiene tareas o criterios de aceptación, o es ambiguo en algo sustancial, detente y consulta al usuario antes de seguir.
 - Salta las tareas que ya estén marcadas `- [x]` (permite retomar un plan a medias).
 
@@ -37,10 +37,10 @@ Implementa el plan indicado: $ARGUMENTS
 
 Procesa las tareas **en orden y de una en una**. Para cada tarea:
 
-1. **RED** — Escribe primero el test que describe el comportamiento de la tarea (con `node:test` y `node:assert`, sin librerías externas; los tests van en `test/`, espejando la estructura de `src/`, p. ej. `test/services/vendehumoService.test.js`). Ejecútalo con `node --test` y **comprueba que falla por la razón correcta** (aserción fallida, no error de sintaxis o de import). Si pasa sin escribir código, el test no sirve: reescríbelo.
+1. **RED** — Escribe primero el test que describe el comportamiento de la tarea (con Vitest, `describe`/`it`/`expect`; los tests van junto al código que prueban, como `*.test.ts`, p. ej. `packages/api/src/services/dish.service.test.ts`; para HTTP, `supertest`). Ejecútalo con `npx vitest run <archivo>` desde `packages/api` y **comprueba que falla por la razón correcta** (aserción fallida, no error de sintaxis o de import). Si pasa sin escribir código, el test no sirve: reescríbelo.
 2. **GREEN** — Escribe el **mínimo** código de producción para que el test pase. Nada de funcionalidad que ningún test exija.
 3. **REFACTOR** — Con los tests en verde, limpia el código y los tests sin cambiar el comportamiento. Vuelve a ejecutar los tests.
-4. **Verifica** — Ejecuta la suite completa (`node --test`); debe estar en verde, sin tests rotos ni omitidos.
+4. **Verifica** — Ejecuta la suite completa (`npm test` desde la raíz); debe estar en verde, sin tests rotos ni omitidos.
 5. **Commit** — Un commit por tarea, que incluya el código, los tests y el plan con la tarea ya marcada (paso siguiente).
 6. **Marca la tarea** — En el plan del worktree cambia `- [ ]` por `- [x]` en esa tarea **antes de commitear**, de modo que el mismo commit refleje el avance.
 
@@ -50,7 +50,7 @@ Reglas del TDD:
 - Si una tarea no es testeable de forma automática (p. ej. solo configuración), dilo explícitamente, verifícala de la forma más directa posible (arrancar la app, `curl`) y explica en el commit por qué no hay test.
 - Si un test pasa en verde a la primera, o si la tarea resulta ser mucho mayor de lo estimado, para y reevalúa (divide la tarea y actualiza el plan) en lugar de continuar a ciegas.
 - Si aparece un bloqueo (requisito contradictorio, dependencia que falta), no improvises: consulta al usuario.
-- Respeta las convenciones del proyecto: clases (un archivo = una clase), métodos en `snake_case`, capas `routers → controllers → services → repositories → models`, mensajes de error en español.
+- Respeta las convenciones del proyecto: clases (un archivo = una clase), métodos en `camelCase`, capas `routes → controllers → services → repositories → models`, mensajes de error en español.
 
 #### Formato del commit
 
@@ -70,7 +70,7 @@ Reglas del TDD:
 Cuando todas las tareas estén `- [x]`:
 
 1. Ejecuta la suite completa de tests.
-2. Recorre **cada criterio de aceptación** del plan y compruébalo con evidencia real (un test que lo cubra, o arrancar la API con `npm start` y probar el endpoint con `curl`). No marques un criterio por suposición.
+2. Recorre **cada criterio de aceptación** del plan y compruébalo con evidencia real (un test que lo cubra, o arrancar la API con `npm run dev:api` y probar el endpoint con `curl`). No marques un criterio por suposición.
 3. Si un criterio no se cumple o no está cubierto, añade la tarea necesaria al plan (con su `- [ ]`) y vuelve al paso 2 (test rojo primero).
 4. Marca `- [x]` cada criterio cumplido y commitea el plan (`docs(plan): mark acceptance criteria as met`).
 
