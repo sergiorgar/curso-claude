@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { TableService } from './table.service.js'
 import { MockTableRepository } from '@repositories/mocks/MockTableRepository.js'
+import { MockOrderRepository } from '@repositories/mocks/MockOrderRepository.js'
 import { MockRestaurantRepository } from '@repositories/mocks/MockRestaurantRepository.js'
 import {
     RestaurantNotFoundError,
@@ -17,10 +18,12 @@ import {
 
 describe('TableService (CRUD)', () => {
     let tableRepo: MockTableRepository
+    let orderRepo: MockOrderRepository
     let service: TableService
 
     beforeEach(async () => {
         tableRepo = new MockTableRepository()
+        orderRepo = new MockOrderRepository()
         const restaurantRepo = new MockRestaurantRepository()
         const now = new Date().toISOString()
         for (const id of ['r1', 'r2']) {
@@ -29,7 +32,7 @@ describe('TableService (CRUD)', () => {
                 ownerFirstName: 'Carlos', ownerLastName: 'García', logoUrl: null, createdAt: now, updatedAt: now
             })
         }
-        service = new TableService(tableRepo, restaurantRepo)
+        service = new TableService(tableRepo, restaurantRepo, orderRepo)
     })
 
     describe('create', () => {
@@ -218,6 +221,39 @@ describe('TableService (CRUD)', () => {
             await expect(service.occupy('r1', table.id, 0)).rejects.toThrow(InvalidGuestsError)
             await expect(service.occupy('r1', 'missing', 2)).rejects.toThrow(TableNotFoundError)
             await expect(service.occupy('r2', table.id, 2)).rejects.toThrow(TableNotFoundError)
+        })
+    })
+
+    describe('listOccupiedWithOrders', () => {
+        const buildOrder = (id: string, tableId: string | null, status: 'pendiente' | 'entregado') => ({
+            id, restaurantId: 'r1', tableId, clientId: null, createdAt: new Date(),
+            items: [{ id: `${id}-i`, dishId: 'd1', quantity: 1, notes: null, status }]
+        })
+
+        it('should return only occupied tables with their active orders ordered by number', async () => {
+            const t2 = await service.create('r1', { number: 2, capacity: 4, status: 'ocupada' })
+            const t1 = await service.create('r1', { number: 1, capacity: 4, status: 'ocupada' })
+            await service.create('r1', { number: 3, capacity: 4 })
+            await orderRepo.create(buildOrder('o1', t1.id, 'pendiente'))
+            await orderRepo.create(buildOrder('o2', t1.id, 'entregado'))
+            await orderRepo.create(buildOrder('o3', t2.id, 'pendiente'))
+            await orderRepo.create(buildOrder('o4', null, 'pendiente'))
+
+            const result = await service.listOccupiedWithOrders('r1')
+
+            expect(result.map(r => r.table.number)).toEqual([1, 2])
+            expect(result[0]!.orders.map(o => o.id)).toEqual(['o1'])
+            expect(result[1]!.orders.map(o => o.id)).toEqual(['o3'])
+        })
+
+        it('should return an empty orders array for an occupied table without orders', async () => {
+            await service.create('r1', { number: 1, capacity: 4, status: 'ocupada' })
+            const result = await service.listOccupiedWithOrders('r1')
+            expect(result[0]!.orders).toEqual([])
+        })
+
+        it('should throw RestaurantNotFoundError for an unknown restaurant', async () => {
+            await expect(service.listOccupiedWithOrders('nope')).rejects.toThrow(RestaurantNotFoundError)
         })
     })
 })

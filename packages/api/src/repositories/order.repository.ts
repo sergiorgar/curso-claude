@@ -40,6 +40,7 @@ export interface OrderRepository {
     updateItemStatus(orderId: string, itemId: string, status: string): Promise<void>
     findActiveByRestaurant(restaurantId: string): Promise<Order[]>
     findByClientId(clientId: string): Promise<Order[]>
+    findActiveByTable(tableId: string): Promise<Order[]>
 }
 
 export class SqliteOrderRepository implements OrderRepository {
@@ -102,6 +103,34 @@ export class SqliteOrderRepository implements OrderRepository {
             ORDER BY o.created_at ASC
         `
         const orderRows = await this.db.all<OrderRowWithTable>(query, [restaurantId])
+
+        const orders: Order[] = []
+        for (const row of orderRows) {
+            const items = await this.getOrderItems(row.id)
+            orders.push({
+                id: row.id,
+                restaurantId: row.restaurant_id,
+                tableId: row.table_id,
+                tableNumber: row.table_number,
+                clientId: row.client_id,
+                createdAt: new Date(row.created_at),
+                items
+            })
+        }
+
+        return orders
+    }
+
+    async findActiveByTable(tableId: string): Promise<Order[]> {
+        const orderRows = await this.db.all<OrderRowWithTable>(
+            `SELECT DISTINCT o.*, t.number as table_number
+             FROM orders o
+             JOIN order_items oi ON o.id = oi.order_id
+             LEFT JOIN tables t ON o.table_id = t.id
+             WHERE o.table_id = ? AND oi.status != 'entregado'
+             ORDER BY o.created_at ASC`,
+            [tableId]
+        )
 
         const orders: Order[] = []
         for (const row of orderRows) {

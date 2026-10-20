@@ -2,6 +2,8 @@ import { randomUUID } from 'crypto'
 import type { Table } from '@models/table.model.js'
 import { normalizeTableStatus, normalizeTableNumber, normalizeTableCapacity } from '@models/table.model.js'
 import type { TableRepository } from '@repositories/table.repository.js'
+import type { Order } from '@models/order.model.js'
+import type { OrderRepository } from '@repositories/order.repository.js'
 import type { RestaurantRepository } from '@repositories/restaurant.repository.js'
 import {
     RestaurantNotFoundError,
@@ -27,10 +29,16 @@ export interface UpdateTableInput {
     status?: string
 }
 
+export interface TableWithOrders {
+    table: Table
+    orders: Order[]
+}
+
 export class TableService {
     constructor(
         private readonly tableRepository: TableRepository,
-        private readonly restaurantRepository: RestaurantRepository
+        private readonly restaurantRepository: RestaurantRepository,
+        private readonly orderRepository: OrderRepository
     ) {}
 
     async create(restaurantId: string, input: CreateTableInput): Promise<Table> {
@@ -135,6 +143,15 @@ export class TableService {
         }
 
         return this.getById(restaurantId, id)
+    }
+
+    async listOccupiedWithOrders(restaurantId: string): Promise<TableWithOrders[]> {
+        const tables = await this.list(restaurantId, 'ocupada')
+        const result: TableWithOrders[] = []
+        for (const table of tables) {
+            result.push({ table, orders: await this.orderRepository.findActiveByTable(table.id) })
+        }
+        return result
     }
 
     private normalizeGuests(people: unknown): number {

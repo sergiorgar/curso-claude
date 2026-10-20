@@ -56,4 +56,9 @@ describe('SqliteOrderRepository (Integration)', () => {
         expect((await repo.findById('o2'))?.tableNumber).toBeNull()
         expect((await repo.findById('o3'))?.tableNumber).toBeNull()
     })
+
+    it('should find active orders of a table', async () => {
+        const orders = await repo.findActiveByTable('t1')
+        expect(orders.map(o => o.id)).toEqual(['o1'])
+    })
 })
