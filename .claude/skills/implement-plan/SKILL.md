@@ -1,18 +1,20 @@
 ---
 name: implement-plan
-description: Implementa un plan de trabajo (p. ej. los generados por plan-feature en docs/plans/) en un git worktree aislado, tarea a tarea con TDD estricto, haciendo un commit y marcando la tarea como hecha tras cada una, hasta cumplir los criterios de aceptación. Úsala cuando el usuario pida implementar, ejecutar o llevar a cabo un plan.
-argument-hint: [ruta al plan, p. ej. docs/plans/mi-plan.md]
+description: Implementa el plan de una issue de GitHub (el generado por plan-feature, publicado como comentario de la issue y guardado en docs/plans/) en un git worktree aislado, tarea a tarea con TDD estricto, haciendo un commit y marcando la tarea como hecha tras cada una, hasta cumplir los criterios de aceptación. Al terminar crea la PR y avisa por Slack con su enlace. Úsala cuando el usuario pida implementar, ejecutar o llevar a cabo una issue o su plan.
+argument-hint: [número de la issue de GitHub a implementar]
 ---
 
 # implement-plan
 
-Implementa el plan indicado: $ARGUMENTS
+Implementa la issue de GitHub indicada por el usuario: $ARGUMENTS
 
 ## Pasos
 
-### 0. Localiza y lee el plan
+### 0. Localiza la issue y lee el plan
 
-- Si `$ARGUMENTS` está vacío, lista `docs/plans/` y pregunta con `AskUserQuestion` cuál implementar (o usa el único que haya).
+- El usuario debe indicar el número de la issue (`$ARGUMENTS`). Si está vacío, pídeselo con `AskUserQuestion`.
+- Busca la issue en GitHub con `gh issue view <número> --comments` y léela entera (título, cuerpo, etiquetas y comentarios). Si `gh` falla (issue inexistente, sin autenticar), informa al usuario y detente.
+- Localiza el plan: es el comentario de la issue publicado por `plan-feature` (si hay varios, el más reciente). El mismo plan suele estar en `docs/plans/<slug>.md`; si existe, trabaja con ese archivo para ir marcando tareas, y si no, guarda el contenido del comentario en `docs/plans/<slug>.md`. Si la issue no tiene plan, detente y sugiere ejecutar `plan-feature` primero.
 - Lee el plan completo: objetivo, alcance, tareas (`- [ ]`) y criterios de aceptación.
 - Lee `CLAUDE.md` del proyecto (capas, clases, métodos en `camelCase`, SQL solo en repositories, errores de dominio con `next(error)`, sin dependencias innecesarias, errores en español) y las guías que el plan o `CLAUDE.md` mencionen.
 - Si el plan no tiene tareas o criterios de aceptación, o es ambiguo en algo sustancial, detente y consulta al usuario antes de seguir.
@@ -77,9 +79,10 @@ Cuando todas las tareas estén `- [x]`:
 ### 4. Cierre
 
 - Comprueba que `git status` está limpio en el worktree y muestra el `git log --oneline` de la rama.
-- Informa al usuario (en español): ruta del worktree, nombre de la rama, tareas completadas, resultado de los tests y estado de cada criterio de aceptación.
-- **Avisa por Slack.** Con todas las tareas implementadas y los criterios de aceptación verificados, publica un mensaje en el canal `revisar-plan` con `mcp__slack__slack_post_message` (si hace falta, localiza el ID del canal con `mcp__slack__slack_list_channels`; carga antes los esquemas con `ToolSearch`). El mensaje, en español, indica que la implementación está lista para revisarse e incluye el nombre del plan, la rama, la ruta del worktree y el resultado de los tests. Si falla el envío, informa al usuario y continúa.
-- **No hagas merge, push ni elimines el worktree** sin que el usuario lo pida; ofrécele esas opciones (merge a la rama principal, abrir PR, borrar el worktree).
+- Informa al usuario (en español): ruta del worktree, nombre de la rama, enlace a la PR, tareas completadas, resultado de los tests y estado de cada criterio de aceptación.
+- **Crea la PR.** Con todas las tareas implementadas y los criterios de aceptación verificados, haz push de la rama (`git push -u origin <rama>`) y crea la PR contra la rama principal con `gh pr create` (desde el worktree). El título sigue Conventional Commits en inglés; el cuerpo, en español, resume el cambio, enlaza la issue con `Closes #<número>`, lista los criterios de aceptación cumplidos y el resultado de los tests, y termina con la línea de atribución que indique el entorno para las PR. Obtén la URL de la PR de la salida de `gh pr create` (o con `gh pr view --json url -q .url`).
+- **Avisa por Slack.** Publica un mensaje en el canal `revisar-plan` con `mcp__slack__slack_post_message` (si hace falta, localiza el ID del canal con `mcp__slack__slack_list_channels`; carga antes los esquemas con `ToolSearch`). El mensaje, en español, indica que la implementación está lista para revisarse e incluye el número de la issue, el nombre del plan, la rama, el resultado de los tests y el **enlace directo a la PR**. Si falla el envío, informa al usuario y continúa.
+- **No hagas merge ni elimines el worktree** sin que el usuario lo pida; ofrécele esas opciones (merge de la PR, borrar el worktree). El push de la rama y la creación de la PR sí forman parte de esta skill.
 
 ## Idioma
 

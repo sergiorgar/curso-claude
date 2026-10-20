@@ -38,6 +38,9 @@ import { Order } from '../../core/models/order.model'
               <div class="order-info">
                 <span class="restaurant-name">{{ order.restaurantName }}</span>
                 <span class="order-meta">
+                  @if (order.tableNumber) {
+                    <span>Mesa {{ order.tableNumber }}</span>
+                  }
                   <span>{{ order.items.length }} {{ order.items.length === 1 ? 'artículo' : 'artículos' }}</span>
                   <span class="order-total">{{ getOrderTotal(order) | number:'1.2-2' }} €</span>
                 </span>

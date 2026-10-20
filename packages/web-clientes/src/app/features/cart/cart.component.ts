@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router'
 import { DecimalPipe } from '@angular/common'
 import { CartStore } from '../../core/store/cart.store'
 import { OrderService } from '../../core/services/order.service'
+import { TableSessionStore } from '../../core/store/table-session.store'
 
 @Component({
   selector: 'app-cart',
@@ -171,6 +172,7 @@ import { OrderService } from '../../core/services/order.service'
 export class CartComponent {
   readonly cartStore = inject(CartStore)
   private readonly orderService = inject(OrderService)
+  private readonly tableSession = inject(TableSessionStore)
   private readonly router = inject(Router)
 
   readonly loading = signal(false)
@@ -207,12 +209,22 @@ export class CartComponent {
       notes: item.notes || null
     }))
 
-    this.orderService.createOrder(restaurantId, items).subscribe({
+    const tableId = this.tableSession.session()?.table.id ?? null
+
+    this.orderService.createOrder(restaurantId, tableId, items).subscribe({
       next: (order) => {
         this.cartStore.clear()
         this.router.navigate(['/orders', order.id])
       },
       error: (err) => {
+        const code = err.error?.error
+        if (code === 'TableNotOccupiedError' || code === 'TableNotFoundError') {
+          this.tableSession.clear()
+          this.router.navigate(['/restaurants', restaurantId, 'tables'], {
+            state: { notice: err.error?.message || 'La mesa ya no está disponible. Elige otra.' }
+          })
+          return
+        }
         this.error.set('Error al confirmar el pedido. Inténtalo de nuevo.')
         this.loading.set(false)
       }
