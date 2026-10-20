@@ -38,7 +38,7 @@ No hay lint configurado. Los tests de los frontends no se ejecutan desde la raí
 La API mezcla dos estilos (detalle en `docs/arquitectura/arquitectura-api.md`):
 
 - **Hexagonal + DDD** solo en el contexto `employee` (`src/contexts/employee/`: `domain`, `application` con casos de uso, `infrastructure`).
-- **Por capas** en `restaurant`, `dish`, `ingredient` y `order`:
+- **Por capas** en `restaurant`, `dish`, `ingredient`, `order` y `table`:
 
 ```
 routes → controllers → services → repositories → models
@@ -53,7 +53,7 @@ La API se monta bajo `/api/v1` (más `GET /health` en la raíz). Los endpoints p
 ## Errores
 
 - Los errores de dominio extienden `AppError` y están en `src/errors/DomainErrors.ts`. Los services y modelos los lanzan; los controllers los pasan con `next(error)` (nada de `try/catch` que construya la respuesta a mano) y los middlewares igual con `next(new XxxError())`.
-- El `errorHandler` traduce el nombre del error a código HTTP (404 not found, 401 credenciales/token, 403 permisos, 400 el resto, 500 inesperados). Si creas un error nuevo que no sea 400, añádelo a la lista correspondiente.
+- El `errorHandler` traduce el nombre del error a código HTTP (404 not found, 409 conflictos, 401 credenciales/token, 403 permisos, 400 el resto, 500 inesperados). Si creas un error nuevo que no sea 400, añádelo a la lista correspondiente.
 - **Formato único de error:** `{ "error": "<NombreDelError>", "message": "<texto en español>" }`.
 - Los mensajes que ve el usuario están **en español**.
 
